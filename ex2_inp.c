@@ -21,6 +21,12 @@
 
 /********************************/
 
+// Static Variables:
+
+volatile sig_atomic_t gotsignal = 0;
+
+/********************************/
+
 // Static Declarations:
 
 static void printGameBoard(char *p_board_line);
@@ -64,27 +70,7 @@ static void printGameBoard(char *p_board_line)
 
 static void signal_hand(int sig)
 {
-    // There is an upper bound for the line sent.
-    // 16 values * 4 digits + commas < MAX_GAME_LINE_LEN
-    char line_buffer[MAX_GAME_LINE_LEN] = {0};
-
-    char read_ch = 0;
-    const char ENDLINE = '\n';
-    unsigned int line_buffer_index = 0;
-
-    while(read_ch != ENDLINE)
-    {
-        // Read one character from STDIN.
-        if(read(STDIN_FILENO, &read_ch, 1) <= 0)
-        {
-            write(STDERR_FILENO, READ_ERROR, sizeof(READ_ERROR));
-        }
-
-        // Insert the read character into the line's buffer.
-        line_buffer[line_buffer_index++] = read_ch;
-    }
-
-    printf("%s", line_buffer);
+    gotsignal = 1;
 }
 
 /********************************/
@@ -93,7 +79,16 @@ static void signal_hand(int sig)
 
 int main()
 {
-    char str[] = "2,4,0,0,2,2,0,16,0,0,4,0,16,0,16,2048";
+    // There is an upper bound for the line sent.
+    // 16 values * 4 digits + commas < MAX_GAME_LINE_LEN
+    char line_buffer[MAX_GAME_LINE_LEN] = {0};
+
+    char read_ch = 0;
+    const char ENDLINE = '\n';
+    unsigned int line_buffer_index = 0;
+
+    //char str[] = "2,4,0,0,2,2,0,16,0,0,4,0,16,0,16,2048";
+
     struct sigaction usr_action;
     sigset_t block_mask;
 
@@ -104,7 +99,32 @@ int main()
     usr_action.sa_flags = 0;
     sigaction (SIGUSR1, &usr_action, NULL);
 
-    printGameBoard(str);
+    while(1)
+    {
+        while(!gotsignal);
+        printf("Hello!\n");
+
+        while(read_ch != ENDLINE)
+        {
+            // Read one character from STDIN.
+            if(read(STDIN_FILENO, &read_ch, 1) <= 0)
+            {
+                write(STDERR_FILENO, READ_ERROR, sizeof(READ_ERROR));
+            }
+            if(read_ch != ENDLINE)
+            {
+                // Insert the read character into the line's buffer.
+                line_buffer[line_buffer_index++] = read_ch;
+            }
+        }
+
+        printf("read: %s\n", line_buffer);
+        printGameBoard(line_buffer);
+        memset(line_buffer, 0, MAX_GAME_LINE_LEN);
+        read_ch = 0;
+        gotsignal = 0;
+        line_buffer_index = 0;
+    }
 
     return 0;
 }
