@@ -2,20 +2,30 @@
 
 // Includes:
 
-#include "stdio.h"
 #include "string.h"
+
+#include <signal.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/fcntl.h>
+#include <stdlib.h>
 
 /********************************/
 
 // Defines:
 
 #define BOARD_SIZE          (4)
+#define MAX_GAME_LINE_LEN   (1000)
+#define READ_ERROR          ("read() failed.")
 
 /********************************/
 
 // Static Declarations:
 
 static void printGameBoard(char *p_board_line);
+
+static void signal_hand(int sig);
 
 /********************************/
 
@@ -25,7 +35,7 @@ static void printGameBoard(char *p_board_line)
 {
     const char SEPERATOR[] = ",";
     char *value = NULL;
-    int row = 0, col = 0;
+    int row = 0, col = 0, value_as_int = 0;
 
     // get the first value.
     value = strtok(p_board_line, SEPERATOR);
@@ -36,12 +46,45 @@ static void printGameBoard(char *p_board_line)
         {
             if(value != NULL)
             {
-                printf("|%04d", atoi(value));
+                value_as_int = atoi(value);
+                if(value_as_int != 0)
+                {
+                  printf("|%04d", value_as_int);
+                }
+                else
+                {
+                    printf("|%.*s", 4, "    ");
+                }
                 value = strtok(NULL, SEPERATOR);
             }
         }
         printf("|\n");
     }
+}
+
+static void signal_hand(int sig)
+{
+    // There is an upper bound for the line sent.
+    // 16 values * 4 digits + commas < MAX_GAME_LINE_LEN
+    char line_buffer[MAX_GAME_LINE_LEN] = {0};
+
+    char read_ch = 0;
+    const char ENDLINE = '\n';
+    unsigned int line_buffer_index = 0;
+
+    while(read_ch != ENDLINE)
+    {
+        // Read one character from STDIN.
+        if(read(STDIN_FILENO, &read_ch, 1) <= 0)
+        {
+            write(STDERR_FILENO, READ_ERROR, sizeof(READ_ERROR));
+        }
+
+        // Insert the read character into the line's buffer.
+        line_buffer[line_buffer_index++] = read_ch;
+    }
+
+    printf("%s", line_buffer);
 }
 
 /********************************/
@@ -51,24 +94,17 @@ static void printGameBoard(char *p_board_line)
 int main()
 {
     char str[] = "2,4,0,0,2,2,0,16,0,0,4,0,16,0,16,2048";
-    printf("%s\n", str);
+    struct sigaction usr_action;
+    sigset_t block_mask;
+
+    /* Establish the signal handler. */
+    sigfillset (&block_mask);
+    usr_action.sa_handler = signal_hand;
+    usr_action.sa_mask = block_mask;
+    usr_action.sa_flags = 0;
+    sigaction (SIGUSR1, &usr_action, NULL);
 
     printGameBoard(str);
 
-    char s[] = ",";
-    char *token = NULL;
-    int val = 0;
-
-
-
-   /* walk through other tokens */
-   while( token != NULL )
-   {
-      val = atoi(token);
-      printf("%04d\n", val);
-      token = strtok(NULL, s);
-   }
-    printf("my milkshake");
-    printf("%04d",12);
     return 0;
 }
