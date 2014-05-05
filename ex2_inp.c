@@ -17,7 +17,14 @@
 
 #define BOARD_SIZE          (4)
 #define MAX_GAME_LINE_LEN   (1000)
-#define READ_ERROR          ("read() failed.")
+
+#define READ_ERROR          ("read() failed.\n")
+#define WRITE_ERROR         ("write() failed.\n")
+
+#define EXIT_MESSAGE        ("BYE BYE\n")
+
+#define EXIT_ERROR_CODE     (1)
+#define EXIT_OK_CODE        (0)
 
 /********************************/
 
@@ -31,7 +38,7 @@ volatile sig_atomic_t gotsignal = 0;
 
 static void printGameBoard(char *p_board_line);
 
-static void signal_hand(int sig);
+static void sigusr1_handler(int sig);
 
 /********************************/
 
@@ -68,9 +75,21 @@ static void printGameBoard(char *p_board_line)
     }
 }
 
-static void signal_hand(int sig)
+static void sigusr1_handler(int sig)
 {
     gotsignal = 1;
+}
+
+static void sigint_handler(int sig)
+{
+    if(write(STDOUT_FILENO, EXIT_MESSAGE, sizeof(EXIT_MESSAGE)) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, WRITE_ERROR, sizeof(WRITE_ERROR));
+        exit(EXIT_ERROR_CODE);
+    }
+
+    exit(EXIT_OK_CODE);
 }
 
 /********************************/
@@ -92,12 +111,18 @@ int main()
     struct sigaction usr_action;
     sigset_t block_mask;
 
-    /* Establish the signal handler. */
+    // Establish the SIGUSR1 signal handler.
     sigfillset (&block_mask);
-    usr_action.sa_handler = signal_hand;
+    usr_action.sa_handler = sigusr1_handler;
     usr_action.sa_mask = block_mask;
     usr_action.sa_flags = 0;
     sigaction (SIGUSR1, &usr_action, NULL);
+
+    // Establish the SIGINT signal handler.
+    usr_action.sa_handler = sigint_handler;
+    usr_action.sa_mask = block_mask;
+    usr_action.sa_flags = 0;
+    sigaction (SIGINT, &usr_action, NULL);
 
     while(1)
     {
@@ -109,8 +134,11 @@ int main()
             // Read one character from STDIN.
             if(read(STDIN_FILENO, &read_ch, 1) <= 0)
             {
+                // No checking needed, exits with error code.
                 write(STDERR_FILENO, READ_ERROR, sizeof(READ_ERROR));
+                exit(EXIT_ERROR_CODE);
             }
+
             if(read_ch != ENDLINE)
             {
                 // Insert the read character into the line's buffer.
