@@ -1,3 +1,7 @@
+// TODO:
+// 1. remove uneeded prints.
+// 2. coding style.
+// 3. ALL return values.
 /********************************/
 
 // Includes:
@@ -20,6 +24,9 @@
 
 #define READ_ERROR          ("read() failed.\n")
 #define WRITE_ERROR         ("write() failed.\n")
+#define SIGACTION_ERROR     ("sigaction() failed.\n")
+#define SIGDELSET_ERROR     ("sigdelset() failed.\n")
+#define SIGFILLSET_ERROR    ("sigfillset() failed.\n")
 
 #define EXIT_MESSAGE        ("BYE BYE\n")
 
@@ -68,6 +75,7 @@ static void printGameBoard(char *p_board_line)
                 {
                     printf("|%.*s", 4, "    ");
                 }
+
                 value = strtok(NULL, SEPERATOR);
             }
         }
@@ -111,24 +119,51 @@ int main()
     struct sigaction usr_action;
     sigset_t block_mask;
 
-    // Establish the SIGUSR1 signal handler.
-    sigfillset (&block_mask);
-    usr_action.sa_handler = sigusr1_handler;
-    usr_action.sa_mask = block_mask;
-    usr_action.sa_flags = 0;
-    sigaction (SIGUSR1, &usr_action, NULL);
+    // Unblock SIGINT
+    if(sigfillset(&block_mask) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, SIGFILLSET_ERROR, sizeof(SIGFILLSET_ERROR));
+        exit(EXIT_ERROR_CODE);
+    }
+
+    if(sigdelset(&block_mask, SIGINT) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, SIGDELSET_ERROR, sizeof(SIGDELSET_ERROR));
+        exit(EXIT_ERROR_CODE);
+    }
 
     // Establish the SIGINT signal handler.
     usr_action.sa_handler = sigint_handler;
     usr_action.sa_mask = block_mask;
     usr_action.sa_flags = 0;
-    sigaction (SIGINT, &usr_action, NULL);
+    if(sigaction (SIGINT, &usr_action, NULL) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR));
+        exit(EXIT_ERROR_CODE);
+    }
+
+    // Establish the SIGUSR1 signal handler.
+    usr_action.sa_handler = sigusr1_handler;
+    usr_action.sa_mask = block_mask;
+    usr_action.sa_flags = 0;
+    if(sigaction (SIGUSR1, &usr_action, NULL) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR));
+        exit(EXIT_ERROR_CODE);
+    }
 
     while(1)
     {
+        // Wait for SIGUSR1.
         while(!gotsignal);
+
         printf("Hello!\n");
 
+        // Read a full line from user.
         while(read_ch != ENDLINE)
         {
             // Read one character from STDIN.
@@ -148,6 +183,8 @@ int main()
 
         printf("read: %s\n", line_buffer);
         printGameBoard(line_buffer);
+
+        // Reset all variables:
         memset(line_buffer, 0, MAX_GAME_LINE_LEN);
         read_ch = 0;
         gotsignal = 0;
