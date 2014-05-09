@@ -9,6 +9,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /********************************/
 
@@ -23,15 +24,25 @@
 
 #define FREE_SLOT                 (0)
 
+// Max. number to print to screen is '2048' which is 4 byte long.
+#define NUM_OF_BYTES_TO_WRITE     (10)
+
+#define WRITE_ERROR               ("write() failed.\n")
+
+#define EXIT_ERROR_CODE           (-1)
+
 /********************************/
 
 // Static Variables:
 
 static unsigned int Game_Board[BOARD_ROW_SIZE][BOARD_COL_SIZE];
 static unsigned int Spawn_Time;
+
 /********************************/
 
 // Static Declarations:
+
+static void tryToWriteToStdout(const char *p_message, unsigned int message_len);
 
 static unsigned int getRandomSpawnTime(void);
 static unsigned int getRandomFreeIndex(void);
@@ -45,6 +56,16 @@ static void startNewGame(void);
 /********************************/
 
 // Functions:
+
+static void tryToWriteToStdout(const char *p_message, unsigned int message_len)
+{
+    if(write(STDOUT_FILENO, p_message, message_len) != message_len)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, WRITE_ERROR, sizeof(WRITE_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+}
 
 static unsigned int getRandomSpawnTime(void)
 {
@@ -72,23 +93,36 @@ static unsigned int getRandomFreeIndex(void)
 // Note: MUST assure that the Matrix has free space.
 static void printBoardAsLine(void)
 {
-    unsigned int row = 0, col = 0;
+    const char SEPERATOR[] = ",";
+    const char NEWLINE[] = "\n";
+
+    unsigned int row = 0, col = 0, string_len = 0;
+    char convert_to_string[NUM_OF_BYTES_TO_WRITE] = {0};
+
     for(row = 0; row < BOARD_ROW_SIZE; ++row)
     {
         for(col = 0; col < BOARD_COL_SIZE; ++col)
         {
-            printf("%d", Game_Board[row][col]);
+            // Convert to string format.
+            sprintf(convert_to_string, "%d", Game_Board[row][col]);
+            string_len = strlen(convert_to_string);
+
+            // Print to screen.
+            tryToWriteToStdout(convert_to_string, string_len);
+
+            // Clear converter.
+            memset(convert_to_string, 0, sizeof(convert_to_string));
 
             // Newline is printed after the last character.
             if((row == BOARD_ROW_SIZE - 1) && (col == BOARD_COL_SIZE - 1))
             {
-                printf("\n");
+                tryToWriteToStdout(NEWLINE, sizeof(NEWLINE) - 1);
             }
 
             // Otherwise print a comma.
             else
             {
-                printf(",");
+                tryToWriteToStdout(SEPERATOR, sizeof(SEPERATOR) - 1);
             }
         }
     }
@@ -131,6 +165,7 @@ static void startNewGame(void)
     }
 
 }
+
 /********************************/
 
 // Main:
