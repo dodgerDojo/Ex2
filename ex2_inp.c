@@ -2,6 +2,8 @@
 // 1. remove uneeded prints.
 // 2. coding style.
 // 3. ALL return values.
+// 4. remove garbage (dead comments)
+// 5. coding style.
 /********************************/
 
 // Includes:
@@ -33,6 +35,10 @@
 #define EXIT_ERROR_CODE     (1)
 #define EXIT_OK_CODE        (0)
 
+// Max. number to print to screen is '2048' which is 4 byte long.
+#define NUM_OF_BYTES_TO_WRITE   (10)
+
+
 /********************************/
 
 // Static Variables:
@@ -47,15 +53,30 @@ static void printGameBoard(char *p_board_line);
 
 static void sigusr1_handler(int sig);
 
+static void tryToWriteToStdout(const char *p_message, unsigned int message_len);
+
 /********************************/
 
 // Functions:
 
+static void tryToWriteToStdout(const char *p_message, unsigned int message_len)
+{
+    if(write(STDOUT_FILENO, p_message, message_len) != message_len)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, WRITE_ERROR, sizeof(WRITE_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+}
+
 static void printGameBoard(char *p_board_line)
 {
+    const int NUM_OF_SPACES_FOR_EMPTY_SLOT = 4;
     const char SEPERATOR[] = ",";
+    const char END_OF_LINE[] = "|\n";
     char *value = NULL;
     int row = 0, col = 0, value_as_int = 0;
+    char str_to_print[NUM_OF_BYTES_TO_WRITE] = {0};
 
     // get the first value.
     value = strtok(p_board_line, SEPERATOR);
@@ -69,17 +90,19 @@ static void printGameBoard(char *p_board_line)
                 value_as_int = atoi(value);
                 if(value_as_int != 0)
                 {
-                  printf("|%04d", value_as_int);
+                    sprintf(str_to_print, "|%04d", value_as_int);
                 }
                 else
                 {
-                    printf("|%.*s", 4, "    ");
+                    sprintf(str_to_print, "|%.*s", NUM_OF_SPACES_FOR_EMPTY_SLOT, "    ");
                 }
 
+                tryToWriteToStdout(str_to_print, strlen(str_to_print));
+                memset(str_to_print, 0, sizeof(str_to_print));
                 value = strtok(NULL, SEPERATOR);
             }
         }
-        printf("|\n");
+        tryToWriteToStdout(END_OF_LINE, sizeof(END_OF_LINE) - 1);
     }
 }
 
@@ -90,13 +113,7 @@ static void sigusr1_handler(int sig)
 
 static void sigint_handler(int sig)
 {
-    if(write(STDOUT_FILENO, EXIT_MESSAGE, sizeof(EXIT_MESSAGE)) < 0)
-    {
-        // No checking needed, exits with error code.
-        write(STDERR_FILENO, WRITE_ERROR, sizeof(WRITE_ERROR));
-        exit(EXIT_ERROR_CODE);
-    }
-
+    tryToWriteToStdout(EXIT_MESSAGE, sizeof(EXIT_MESSAGE) - 1);
     exit(EXIT_OK_CODE);
 }
 
