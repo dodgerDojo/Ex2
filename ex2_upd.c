@@ -21,15 +21,26 @@
 #define MIN_SPAWN_TIME_IN_SEC     (2)
 #define MAX_SPAWN_TIME_IN_SEC     (4)
 
-#define FREE_SLOT                (0)
+#define FREE_SLOT                 (0)
 
+/********************************/
+
+// Static Variables:
+
+static unsigned int Game_Board[BOARD_ROW_SIZE][BOARD_COL_SIZE];
+static unsigned int Spawn_Time;
 /********************************/
 
 // Static Declarations:
 
 static unsigned int getRandomSpawnTime(void);
-static unsigned int getRandomFreeIndex(const unsigned int board[][BOARD_COL_SIZE]);
-static void printBoardAsLine(const unsigned int board[][BOARD_COL_SIZE]);
+static unsigned int getRandomFreeIndex(void);
+
+static void printBoardAsLine(void);
+
+static int isBoardEmpty(void);
+
+static void startNewGame(void);
 
 /********************************/
 
@@ -44,13 +55,13 @@ static unsigned int getRandomSpawnTime(void)
 }
 
 // Note: MUST assure that the Matrix has free space.
-static unsigned int getRandomFreeIndex(const unsigned int board[][BOARD_COL_SIZE])
+static unsigned int getRandomFreeIndex(void)
 {
     // Generate a random index within the possible range.
     unsigned int random_index = rand() % BOARD_SIZE;
 
     // Keep generating until the index points to a free slot.
-    while(*(board[0] + random_index) != FREE_SLOT)
+    while(*(Game_Board[0] + random_index) != FREE_SLOT)
     {
         random_index = rand() % BOARD_SIZE;
     }
@@ -59,14 +70,14 @@ static unsigned int getRandomFreeIndex(const unsigned int board[][BOARD_COL_SIZE
 }
 
 // Note: MUST assure that the Matrix has free space.
-static void printBoardAsLine(const unsigned int board[][BOARD_COL_SIZE])
+static void printBoardAsLine(void)
 {
     unsigned int row = 0, col = 0;
     for(row = 0; row < BOARD_ROW_SIZE; ++row)
     {
         for(col = 0; col < BOARD_COL_SIZE; ++col)
         {
-            printf("%d", board[row][col]);
+            printf("%d", Game_Board[row][col]);
 
             // Newline is printed after the last character.
             if((row == BOARD_ROW_SIZE - 1) && (col == BOARD_COL_SIZE - 1))
@@ -83,33 +94,55 @@ static void printBoardAsLine(const unsigned int board[][BOARD_COL_SIZE])
     }
 }
 
+static int isBoardEmpty(void)
+{
+    int row = 0, col = 0;
+    for(row = 0; row < BOARD_ROW_SIZE; ++row)
+    {
+        for(col = 0; col < BOARD_COL_SIZE; ++col)
+        {
+            if(Game_Board[row][col] != 0)
+            {
+                return 0;
+            }
+        }
+    }
+
+    return 1;
+}
+
+static void startNewGame(void)
+{
+    int i = 0, slot_index = 0;
+    const int NUM_OF_NEW_SLOTS_TO_CREATE = 2;
+    const int CREATED_SLOT_VALUE = 2;
+
+    // Clear game board.
+    memset(Game_Board, 0, sizeof(Game_Board));
+
+    // Get a random waiting time.
+    Spawn_Time = getRandomSpawnTime();
+
+    // Choose slots to be the first initialized slots.
+    for(i = 0; i < NUM_OF_NEW_SLOTS_TO_CREATE; ++i)
+    {
+        slot_index = getRandomFreeIndex();
+        *(Game_Board[0] + slot_index) = CREATED_SLOT_VALUE;
+    }
+
+}
 /********************************/
 
 // Main:
 
 int main()
 {
-    int i = 0;
-
-    unsigned int random_index = 0;
-
-    // Create the game's board.
-    unsigned int game_board[BOARD_ROW_SIZE][BOARD_COL_SIZE];
-
-    // Initialize the game board.
-    memset(game_board, 0, sizeof(game_board));
-
     // Initialize the rand() seed.
     srand(time(NULL));
 
-    for(i = 1; i < BOARD_SIZE + 1; ++i)
-    {
-        // The weird cast is for the compiler (passing non-const to const argument).
-        random_index = getRandomFreeIndex((const unsigned int (*)[BOARD_ROW_SIZE])game_board);
-        *(game_board[0] + random_index) = i;
-    }
+    startNewGame();
 
-    printBoardAsLine((const unsigned int (*)[BOARD_ROW_SIZE])game_board);
+    printBoardAsLine();
 
     return 0;
 }
