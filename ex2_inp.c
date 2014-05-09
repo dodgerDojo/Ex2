@@ -71,8 +71,9 @@ static void tryToWriteToStdout(const char *p_message, unsigned int message_len)
 
 static void printGameBoard(char *p_board_line)
 {
-    const int NUM_OF_SPACES_FOR_EMPTY_SLOT = 4;
+    const int NUM_OF_SPACES_FOR_EMPTY_SLOT = 6;
     const char SEPERATOR[] = ",";
+    const char EMPTY_SLOT[] = "|      ";
     const char END_OF_LINE[] = "|\n";
     char *value = NULL;
     int row = 0, col = 0, value_as_int = 0;
@@ -88,17 +89,19 @@ static void printGameBoard(char *p_board_line)
             if(value != NULL)
             {
                 value_as_int = atoi(value);
+
                 if(value_as_int != 0)
                 {
-                    sprintf(str_to_print, "|%04d", value_as_int);
-                }
-                else
-                {
-                    sprintf(str_to_print, "|%.*s", NUM_OF_SPACES_FOR_EMPTY_SLOT, "    ");
+                    sprintf(str_to_print, "| %04d ", value_as_int);
+                    tryToWriteToStdout(str_to_print, strlen(str_to_print));
+                    memset(str_to_print, 0, sizeof(str_to_print));
                 }
 
-                tryToWriteToStdout(str_to_print, strlen(str_to_print));
-                memset(str_to_print, 0, sizeof(str_to_print));
+                else
+                {
+                    tryToWriteToStdout(EMPTY_SLOT, sizeof(EMPTY_SLOT) - 1);
+                }
+
                 value = strtok(NULL, SEPERATOR);
             }
         }
