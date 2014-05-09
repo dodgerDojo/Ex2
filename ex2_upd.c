@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
     // Get the printer's pid.
     printer_pid = atoi(argv[ARGV_PRINTER_PID_INDEX]);
 
-    //kill(printer_pid, SIGUSR1);
+    kill(printer_pid, SIGUSR1);
 
     printBoardAsLine();
 

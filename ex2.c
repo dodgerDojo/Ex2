@@ -16,8 +16,13 @@
 
 #define PIPE_ERROR           ("pipe() failed.\n")
 #define EXECVP_ERROR         ("execvp() failed.\n")
+#define CLOSE_ERROR          ("close() failed.\n")
+#define FORK_ERROR           ("fork() failed.\n")
+#define DUP2_ERROR           ("dup2() failed.\n")
 
 #define PIPE_FDS_AMOUNT      (2)
+#define PIPE_READ            (0)
+#define PIPE_WRITE           (1)
 
 #define EXIT_ERROR_CODE      (1)
 #define EXIT_OK_CODE         (0)
@@ -38,7 +43,8 @@ static int Pipe_Fds[PIPE_FDS_AMOUNT];
 // Static Declarations:
 
 static void createPipe(void);
-static pid_t runProcess(char *args[]);
+static pid_t runPrinterProcess(char *args[]);
+static pid_t runGameProcess(char *args[]);
 
 /********************************/
 
@@ -54,16 +60,83 @@ static void createPipe(void)
     }
 }
 
-static pid_t runProcess(char *args[])
+static pid_t runPrinterProcess(char *args[])
 {
     pid_t child_pid = fork();
 
+    // Assure fork() succeeded.
+    if(child_pid < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, FORK_ERROR, sizeof(FORK_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+
+    // This is the printer's process.
     if(0 == child_pid)
     {
-        // This is the printer's process.
+        // Close write side of pipe.
+        if(close(Pipe_Fds[PIPE_WRITE]) < 0)
+        {
+            // No checking needed, exits with error code.
+            write(STDERR_FILENO, CLOSE_ERROR, sizeof(CLOSE_ERROR) - 1);
+            exit(EXIT_ERROR_CODE);
+        }
+
+        // Redirect I/O - STDIN
+        if(dup2(Pipe_Fds[PIPE_READ], STDIN_FILENO) < 0)
+        {
+            // No checking needed, exits with error code.
+            write(STDERR_FILENO, DUP2_ERROR, sizeof(DUP2_ERROR) - 1);
+            exit(EXIT_ERROR_CODE);
+        }
+
+        // Run the printer's process.
         execvp(args[0], args);
 
+        // got here - execvp() failed! No checking needed, exits with error code.
+        write(STDERR_FILENO, EXECVP_ERROR, sizeof(EXECVP_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+
+    return child_pid;
+}
+
+static pid_t runGameProcess(char *args[])
+{
+    pid_t child_pid = fork();
+
+    // Assure fork() succeeded.
+    if(child_pid < 0)
+    {
         // No checking needed, exits with error code.
+        write(STDERR_FILENO, FORK_ERROR, sizeof(FORK_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+
+    // This is the game's process.
+    if(0 == child_pid)
+    {
+        // Close read side of pipe.
+        if(close(Pipe_Fds[PIPE_READ]) < 0)
+        {
+            // No checking needed, exits with error code.
+            write(STDERR_FILENO, CLOSE_ERROR, sizeof(CLOSE_ERROR) - 1);
+            exit(EXIT_ERROR_CODE);
+        }
+
+        // Redirect I/O: STDOUT
+        if(dup2(Pipe_Fds[PIPE_WRITE], STDOUT_FILENO) < 0)
+        {
+            // No checking needed, exits with error code.
+            write(STDERR_FILENO, DUP2_ERROR, sizeof(DUP2_ERROR) - 1);
+            exit(EXIT_ERROR_CODE);
+        }
+
+        // Run the printer's process.
+        execvp(args[0], args);
+
+        // got here - execvp() failed! No checking needed, exits with error code.
         write(STDERR_FILENO, EXECVP_ERROR, sizeof(EXECVP_ERROR) - 1);
         exit(EXIT_ERROR_CODE);
     }
@@ -89,14 +162,15 @@ int main(void)
     createPipe();
 
     // Run the printer process.
-    printer_pid = runProcess(printer_args);
+    printer_pid = runPrinterProcess(printer_args);
     printf("printer pid: %d\n", printer_pid);
 
+    // Convert the printer's pid into a string.
     sprintf(printer_pid_str, "%d", printer_pid);
     game_args[1] = printer_pid_str;
 
     // Run the game process.
-    game_pid = runProcess(game_args);
+    game_pid = runGameProcess(game_args);
     printf("game pid: %d\n", game_pid);
 
     return EXIT_OK_CODE;
