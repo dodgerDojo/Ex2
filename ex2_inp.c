@@ -137,8 +137,6 @@ int main(void)
     struct sigaction usr_action;
     sigset_t block_mask;
 
-    printf("my pid: %d\n", getpid());
-
     // Unblock SIGINT
     if(sigfillset(&block_mask) < 0)
     {
@@ -147,8 +145,6 @@ int main(void)
         exit(EXIT_ERROR_CODE);
     }
 
-    printf("habu1\n");
-
     if(sigdelset(&block_mask, SIGINT) < 0)
     {
         // No checking needed, exits with error code.
@@ -156,33 +152,27 @@ int main(void)
         exit(EXIT_ERROR_CODE);
     }
 
-    printf("habu2\n");
-
     // Establish the SIGINT signal handler.
     usr_action.sa_handler = sigint_handler;
     usr_action.sa_mask = block_mask;
     usr_action.sa_flags = 0;
-    if(sigaction (SIGINT, &usr_action, NULL) < 0)
+    if(sigaction(SIGINT, &usr_action, NULL) < 0)
     {
         // No checking needed, exits with error code.
         write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR));
         exit(EXIT_ERROR_CODE);
     }
-
-    printf("habu3\n");
 
     // Establish the SIGUSR1 signal handler.
     usr_action.sa_handler = sigusr1_handler;
     usr_action.sa_mask = block_mask;
     usr_action.sa_flags = 0;
-    if(sigaction (SIGUSR1, &usr_action, NULL) < 0)
+    if(sigaction(SIGUSR1, &usr_action, NULL) < 0)
     {
         // No checking needed, exits with error code.
         write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR));
         exit(EXIT_ERROR_CODE);
     }
-
-    printf("habu4\n");
 
     while(1)
     {

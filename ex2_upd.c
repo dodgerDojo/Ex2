@@ -179,6 +179,7 @@ int main(int argc, char *argv[])
 
     pid_t printer_pid = 0;
 
+    // Check number of inputs.
     if(argc != NUM_OF_INPUTS + 1)
     {
         // No checking needed, exits with error code.
@@ -191,6 +192,7 @@ int main(int argc, char *argv[])
 
     startNewGame();
 
+    // Get the printer's pid.
     printer_pid = atoi(argv[ARGV_PRINTER_PID_INDEX]);
 
     //kill(printer_pid, SIGUSR1);
