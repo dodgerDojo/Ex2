@@ -8,8 +8,7 @@
 
 // Includes:
 
-#include "string.h"
-
+#include <string.h>
 #include <signal.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -71,7 +70,6 @@ static void tryToWriteToStdout(const char *p_message, unsigned int message_len)
 
 static void printGameBoard(char *p_board_line)
 {
-    const int NUM_OF_SPACES_FOR_EMPTY_SLOT = 6;
     const char SEPERATOR[] = ",";
     const char EMPTY_SLOT[] = "|      ";
     const char END_OF_LINE[] = "|\n";
@@ -124,7 +122,7 @@ static void sigint_handler(int sig)
 
 // Main:
 
-int main()
+int main(void)
 {
     // There is an upper bound for the line sent.
     // 16 values * 4 digits + commas < MAX_GAME_LINE_LEN
@@ -139,6 +137,8 @@ int main()
     struct sigaction usr_action;
     sigset_t block_mask;
 
+    printf("my pid: %d\n", getpid());
+
     // Unblock SIGINT
     if(sigfillset(&block_mask) < 0)
     {
@@ -147,12 +147,16 @@ int main()
         exit(EXIT_ERROR_CODE);
     }
 
+    printf("habu1\n");
+
     if(sigdelset(&block_mask, SIGINT) < 0)
     {
         // No checking needed, exits with error code.
         write(STDERR_FILENO, SIGDELSET_ERROR, sizeof(SIGDELSET_ERROR));
         exit(EXIT_ERROR_CODE);
     }
+
+    printf("habu2\n");
 
     // Establish the SIGINT signal handler.
     usr_action.sa_handler = sigint_handler;
@@ -165,6 +169,8 @@ int main()
         exit(EXIT_ERROR_CODE);
     }
 
+    printf("habu3\n");
+
     // Establish the SIGUSR1 signal handler.
     usr_action.sa_handler = sigusr1_handler;
     usr_action.sa_mask = block_mask;
@@ -175,6 +181,8 @@ int main()
         write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR));
         exit(EXIT_ERROR_CODE);
     }
+
+    printf("habu4\n");
 
     while(1)
     {
@@ -211,5 +219,5 @@ int main()
         line_buffer_index = 0;
     }
 
-    return 0;
+    return EXIT_OK_CODE;
 }
