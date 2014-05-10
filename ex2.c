@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <sys/fcntl.h>
 #include <stdlib.h>
+#include <errno.h>
 
 /********************************/
 
@@ -40,13 +41,15 @@
 
 // Static Variables:
 
-static int Pipe_Fds[PIPE_FDS_AMOUNT];
+static int Game_To_Printer_Pipe_Fds[PIPE_FDS_AMOUNT];
 
 /********************************/
 
 // Static Declarations:
 
 static void createPipe(void);
+static void closePipe(int pipe[]);
+
 static pid_t runPrinterProcess(char *args[]);
 static pid_t runGameProcess(char *args[]);
 
@@ -56,10 +59,20 @@ static pid_t runGameProcess(char *args[]);
 
 static void createPipe(void)
 {
-    if(pipe(Pipe_Fds) < 0)
+    if(pipe(Game_To_Printer_Pipe_Fds) < 0)
     {
         // No checking needed, exits with error code.
         write(STDERR_FILENO, PIPE_ERROR, sizeof(PIPE_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+}
+
+static void closePipe(int pipe[])
+{
+    if((close(pipe[PIPE_WRITE]) < 0) || (close(pipe[PIPE_READ]) < 0))
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, CLOSE_ERROR, sizeof(CLOSE_ERROR) - 1);
         exit(EXIT_ERROR_CODE);
     }
 }
@@ -80,7 +93,7 @@ static pid_t runPrinterProcess(char *args[])
     if(0 == child_pid)
     {
         // Close write side of pipe.
-        if(close(Pipe_Fds[PIPE_WRITE]) < 0)
+        if(close(Game_To_Printer_Pipe_Fds[PIPE_WRITE]) < 0)
         {
             // No checking needed, exits with error code.
             write(STDERR_FILENO, CLOSE_ERROR, sizeof(CLOSE_ERROR) - 1);
@@ -88,7 +101,7 @@ static pid_t runPrinterProcess(char *args[])
         }
 
         // Redirect I/O - STDIN
-        if(dup2(Pipe_Fds[PIPE_READ], STDIN_FILENO) < 0)
+        if(dup2(Game_To_Printer_Pipe_Fds[PIPE_READ], STDIN_FILENO) < 0)
         {
             // No checking needed, exits with error code.
             write(STDERR_FILENO, DUP2_ERROR, sizeof(DUP2_ERROR) - 1);
@@ -121,8 +134,11 @@ static pid_t runGameProcess(char *args[])
     // This is the game's process.
     if(0 == child_pid)
     {
-        // Close read side of pipe.
-        if(close(Pipe_Fds[PIPE_READ]) < 0)
+        printf("Game:: Close printer read side.\n");
+        fflush(stdout);
+
+        // Close read side of the game-printer pipe.
+        if(close(Game_To_Printer_Pipe_Fds[PIPE_READ]) < 0)
         {
             // No checking needed, exits with error code.
             write(STDERR_FILENO, CLOSE_ERROR, sizeof(CLOSE_ERROR) - 1);
@@ -130,14 +146,14 @@ static pid_t runGameProcess(char *args[])
         }
 
         // Redirect I/O: STDOUT
-        if(dup2(Pipe_Fds[PIPE_WRITE], STDOUT_FILENO) < 0)
+        if(dup2(Game_To_Printer_Pipe_Fds[PIPE_WRITE], STDOUT_FILENO) < 0)
         {
             // No checking needed, exits with error code.
             write(STDERR_FILENO, DUP2_ERROR, sizeof(DUP2_ERROR) - 1);
             exit(EXIT_ERROR_CODE);
         }
 
-        // Run the printer's process.
+        // Run the game's process.
         execvp(args[0], args);
 
         // got here - execvp() failed! No checking needed, exits with error code.
@@ -180,9 +196,19 @@ int main(void)
     game_pid = runGameProcess(game_args);
     printf("game pid: %d\n", game_pid);
 
-    sleep(1);
+    // Parent closes pipe [doesn't use it].
+    closePipe(Game_To_Printer_Pipe_Fds);
+
+    sleep(300);
 
     if(kill(printer_pid, SIGINT) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, KILL_ERROR, sizeof(KILL_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+
+    if(kill(game_pid, SIGINT) < 0)
     {
         // No checking needed, exits with error code.
         write(STDERR_FILENO, KILL_ERROR, sizeof(KILL_ERROR) - 1);

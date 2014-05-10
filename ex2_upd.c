@@ -30,8 +30,16 @@
 // Max. number to print to screen is '2048' which is 4 byte long.
 #define NUM_OF_BYTES_TO_WRITE     (10)
 
+// Keys:
+#define UP_KEY                    ('W')
+#define DOWN_KEY                  ('X')
+#define LEFT_KEY                  ('A')
+#define RIGHT_KEY                 ('D')
+#define NEW_GAME_KEY              ('S')
+
 #define WRITE_ERROR               ("write() failed.\n")
 #define KILL_ERROR                ("kill() failed.\n")
+#define READ_ERROR                ("read() failed.\n")
 #define NOF_INPUTS_ERROR          ("Wrong number of inputs.\n")
 
 #define EXIT_ERROR_CODE           (-1)
@@ -60,6 +68,14 @@ static void printBoardAsLine(void);
 static int isBoardEmpty(void);
 
 static void startNewGame(void);
+
+static char readDirectionFromUser(void);
+static char isDirectionValid(char direction);
+
+static void updateGameBoard(char direction);
+static void spawnNewSlot(void);
+
+static void handleGame(void);
 
 /********************************/
 
@@ -98,7 +114,6 @@ static unsigned int getRandomFreeIndex(void)
     return random_index;
 }
 
-// Note: MUST assure that the Matrix has free space.
 static void printBoardAsLine(void)
 {
     const char SEPERATOR[] = ",";
@@ -106,6 +121,13 @@ static void printBoardAsLine(void)
 
     unsigned int row = 0, col = 0, string_len = 0;
     char convert_to_string[NUM_OF_BYTES_TO_WRITE] = {0};
+
+    if(kill(Printer_Pid, SIGUSR1) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, KILL_ERROR, sizeof(KILL_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
 
     for(row = 0; row < BOARD_ROW_SIZE; ++row)
     {
@@ -172,17 +194,67 @@ static void startNewGame(void)
         *(Game_Board[0] + slot_index) = CREATED_SLOT_VALUE;
     }
 
-    if(kill(Printer_Pid, SIGUSR1) < 0)
-    {
-        // No checking needed, exits with error code.
-        write(STDERR_FILENO, KILL_ERROR, sizeof(KILL_ERROR) - 1);
-        exit(EXIT_ERROR_CODE);
-    }
-
     fprintf(stderr, "%s", "UPD:: Printing Line.\n");
     fflush(stderr);
 
     printBoardAsLine();
+}
+
+
+
+
+static char readDirectionFromUser(void)
+{
+    char direction = 0;
+
+    // Read one character from STDIN.
+    if(read(STDIN_FILENO, &direction, sizeof(direction)) <= 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, READ_ERROR, sizeof(READ_ERROR));
+        exit(EXIT_ERROR_CODE);
+    }
+
+    return direction;
+}
+
+static char isDirectionValid(char direction)
+{
+    return ((direction == UP_KEY) || (direction == DOWN_KEY) || \
+            (direction == LEFT_KEY) || (direction == RIGHT_KEY) ||
+            (direction == NEW_GAME_KEY));
+}
+
+static void updateGameBoard(char direction)
+{
+
+}
+
+static void spawnNewSlot(void)
+{
+
+}
+
+static void handleGame(void)
+{
+    startNewGame();
+
+    while(1)
+    {
+        char direction = readDirectionFromUser();
+
+        if(!isDirectionValid(direction))
+        {
+            continue;
+        }
+
+        fprintf(stderr, "Got direction: %c\n", direction);
+        fflush(stderr);
+
+        updateGameBoard(direction);
+        spawnNewSlot();
+        printBoardAsLine();
+    }
 }
 
 /********************************/
@@ -211,7 +283,7 @@ int main(int argc, char *argv[])
     // Get the printer's pid.
     Printer_Pid = atoi(argv[ARGV_PRINTER_PID_INDEX]);
 
-    startNewGame();
+    handleGame();
 
     return 0;
 }

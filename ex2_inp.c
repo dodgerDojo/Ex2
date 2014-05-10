@@ -198,7 +198,7 @@ int main(void)
         while(read_ch != ENDLINE)
         {
             // Read one character from STDIN.
-            if(read(STDIN_FILENO, &read_ch, 1) <= 0)
+            if(read(STDIN_FILENO, &read_ch, sizeof(read_ch)) <= 0)
             {
                 // No checking needed, exits with error code.
                 write(STDERR_FILENO, READ_ERROR, sizeof(READ_ERROR));
