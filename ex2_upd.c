@@ -1,6 +1,8 @@
 // TODO:
 // 1. check if the matrix has free space.
 // 2. printf->write(STDOUT)
+// 3. kill() return address
+
 /********************************/
 
 // Includes:
@@ -29,6 +31,7 @@
 #define NUM_OF_BYTES_TO_WRITE     (10)
 
 #define WRITE_ERROR               ("write() failed.\n")
+#define KILL_ERROR                ("kill() failed.\n")
 #define NOF_INPUTS_ERROR          ("Wrong number of inputs.\n")
 
 #define EXIT_ERROR_CODE           (-1)
@@ -36,6 +39,9 @@
 /********************************/
 
 // Static Variables:
+
+static pid_t Printer_Pid;
+
 
 static unsigned int Game_Board[BOARD_ROW_SIZE][BOARD_COL_SIZE];
 static unsigned int Spawn_Time;
@@ -166,6 +172,17 @@ static void startNewGame(void)
         *(Game_Board[0] + slot_index) = CREATED_SLOT_VALUE;
     }
 
+    if(kill(Printer_Pid, SIGUSR1) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, KILL_ERROR, sizeof(KILL_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+
+    fprintf(stderr, "%s", "UPD:: Printing Line.\n");
+    fflush(stderr);
+
+    printBoardAsLine();
 }
 
 /********************************/
@@ -177,7 +194,8 @@ int main(int argc, char *argv[])
     const unsigned int NUM_OF_INPUTS = 1;
     const unsigned int ARGV_PRINTER_PID_INDEX = 1;
 
-    pid_t printer_pid = 0;
+    fprintf(stderr, "%s", "UPD:: In Upd.\n");
+    fflush(stderr);
 
     // Check number of inputs.
     if(argc != NUM_OF_INPUTS + 1)
@@ -190,14 +208,10 @@ int main(int argc, char *argv[])
     // Initialize the rand() seed.
     srand(time(NULL));
 
-    startNewGame();
-
     // Get the printer's pid.
-    printer_pid = atoi(argv[ARGV_PRINTER_PID_INDEX]);
+    Printer_Pid = atoi(argv[ARGV_PRINTER_PID_INDEX]);
 
-    kill(printer_pid, SIGUSR1);
-
-    printBoardAsLine();
+    startNewGame();
 
     return 0;
 }

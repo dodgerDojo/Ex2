@@ -1,3 +1,6 @@
+// TODO:
+// 1. how to wait for printer to initialize?
+
 /********************************/
 
 // Includes:
@@ -19,6 +22,7 @@
 #define CLOSE_ERROR          ("close() failed.\n")
 #define FORK_ERROR           ("fork() failed.\n")
 #define DUP2_ERROR           ("dup2() failed.\n")
+#define KILL_ERROR           ("kill() failed.\n")
 
 #define PIPE_FDS_AMOUNT      (2)
 #define PIPE_READ            (0)
@@ -165,6 +169,9 @@ int main(void)
     printer_pid = runPrinterProcess(printer_args);
     printf("printer pid: %d\n", printer_pid);
 
+    // Wait for the printer to initialize.
+    sleep(1);
+
     // Convert the printer's pid into a string.
     sprintf(printer_pid_str, "%d", printer_pid);
     game_args[1] = printer_pid_str;
@@ -173,5 +180,15 @@ int main(void)
     game_pid = runGameProcess(game_args);
     printf("game pid: %d\n", game_pid);
 
+    sleep(1);
+
+    if(kill(printer_pid, SIGINT) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, KILL_ERROR, sizeof(KILL_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+
+    printf("Game Ended.\n");
     return EXIT_OK_CODE;
 }

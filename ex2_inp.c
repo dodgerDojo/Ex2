@@ -137,6 +137,9 @@ int main(void)
     struct sigaction usr_action;
     sigset_t block_mask;
 
+    printf("Printer:: Printer started!\n");
+    fflush(stdout);
+
     // Unblock SIGINT
     if(sigfillset(&block_mask) < 0)
     {
@@ -163,6 +166,9 @@ int main(void)
         exit(EXIT_ERROR_CODE);
     }
 
+    printf("Printer:: Ready to receive SIGINT...\n");
+    fflush(stdout);
+
     // Establish the SIGUSR1 signal handler.
     usr_action.sa_handler = sigusr1_handler;
     usr_action.sa_mask = block_mask;
@@ -174,12 +180,19 @@ int main(void)
         exit(EXIT_ERROR_CODE);
     }
 
+    printf("Printer:: Ready to receive SIGUSR1...\n");
+    fflush(stdout);
+
     while(1)
     {
+        printf("Printer:: Waiting for signal...\n");
+        fflush(stdout);
+
         // Wait for SIGUSR1.
         while(!gotsignal);
 
-        printf("Hello!\n");
+        printf("Printer:: Got SIGUSR1!\n");
+        fflush(stdout);
 
         // Read a full line from user.
         while(read_ch != ENDLINE)
@@ -199,7 +212,9 @@ int main(void)
             }
         }
 
-        printf("read: %s\n", line_buffer);
+        printf("Printer:: read: %s\n", line_buffer);
+        fflush(stdout);
+
         printGameBoard(line_buffer);
 
         // Reset all variables:
