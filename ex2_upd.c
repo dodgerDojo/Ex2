@@ -77,6 +77,8 @@ static void spawnNewSlot(void);
 
 static void handleGame(void);
 
+static char runGameAlgorithm(unsigned int line[], int start, int end, int direction);
+
 /********************************/
 
 // Functions:
@@ -200,9 +202,6 @@ static void startNewGame(void)
     printBoardAsLine();
 }
 
-
-
-
 static char readDirectionFromUser(void)
 {
     char direction = 0;
@@ -254,6 +253,57 @@ static void handleGame(void)
         updateGameBoard(direction);
         spawnNewSlot();
         printBoardAsLine();
+    }
+}
+
+
+static char runGameAlgorithm(unsigned int line[], int start, int end, int direction)
+{
+    unsigned int already_unified_flags[BOARD_ROW_SIZE] = {0};
+
+    // Starting from the slot before the last slot.
+    int index = end - direction;
+
+    // Try to move each slot to the desired direction.
+    while (index != (start - direction))
+    {
+        // 'runner' is the current slot to move.
+        int runner = index;
+
+        while(runner != end)
+        {
+            // 'next' is the next slot in the desired direction after 'runner'.
+            int next = runner + direction;
+
+            // Free space to move
+            if(line[next] == FREE_SLOT)
+            {
+                // Swap and continue
+                line[next] = line[runner];
+                line[runner] = FREE_SLOT;
+
+                runner = runner + direction;
+                continue;
+            }
+
+            // Identical slots
+            if(line[next] == line[runner])
+            {
+                // Unify only if this slot hasn't been unified already!
+                if(!already_unified_flags[next])
+                {
+                    // Unify and update flags.
+                    line[next] = line[next] + line[runner];
+                    line[runner] = 0;
+                    already_unified_flags[next] = 1;
+                }
+            }
+
+            // We got here if there was already a union or no place to go.
+            break;
+        }
+
+        index = index - direction;
     }
 }
 
