@@ -199,7 +199,7 @@ int main(void)
     // Parent closes pipe [doesn't use it].
     closePipe(Game_To_Printer_Pipe_Fds);
 
-    sleep(300);
+    sleep(30000);
 
     if(kill(printer_pid, SIGINT) < 0)
     {

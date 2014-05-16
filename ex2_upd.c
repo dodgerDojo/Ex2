@@ -69,7 +69,7 @@ static unsigned int getRandomFreeIndex(void);
 
 static void printBoardAsLine(void);
 
-static int isBoardEmpty(void);
+static int isBoardFull(void);
 
 static void startNewGame(void);
 
@@ -168,21 +168,21 @@ static void printBoardAsLine(void)
     }
 }
 
-static int isBoardEmpty(void)
+static int isBoardFull(void)
 {
     int row = 0, col = 0;
     for(row = 0; row < BOARD_ROW_SIZE; ++row)
     {
         for(col = 0; col < BOARD_COL_SIZE; ++col)
         {
-            if(Game_Board[row][col] != 0)
+            if(Game_Board[row][col] == FREE_SLOT)
             {
-                return 0;
+                return FALSE;
             }
         }
     }
 
-    return 1;
+    return TRUE;
 }
 
 static void startNewGame(void)
@@ -228,7 +228,7 @@ static char readDirectionFromUser(void)
 static char isDirectionValid(char direction)
 {
     return ((direction == UP_KEY) || (direction == DOWN_KEY) || \
-            (direction == LEFT_KEY) || (direction == RIGHT_KEY) ||
+            (direction == LEFT_KEY) || (direction == RIGHT_KEY) || \
             (direction == NEW_GAME_KEY));
 }
 
@@ -239,15 +239,59 @@ static void spawnNewSlot(void)
 
 static void handleGame(void)
 {
+    char direction = 0;
     startNewGame();
+
+    /*DEBUG*/
+/*
+    int row = 0, col = 0, val = 0;
+
+    Game_Board[0][0] = 2;
+    Game_Board[0][1] = 4;
+    Game_Board[0][2] = 8;
+    Game_Board[0][3] = 4;
+
+    Game_Board[1][2] = 2;
+    Game_Board[1][3] = 2;
+
+    Game_Board[2][2] = 2;
+    Game_Board[2][3] = 8;
+
+    Game_Board[3][3] = 2;
+
+    printBoardAsLine();
+
+    fprintf(stderr, "Enter row,col,val\n");
+    fflush(stderr);
+    scanf("%d %d %d", &row, &col, &val);
+    Game_Board[row][col] = val;
+    printBoardAsLine();
+
+    fprintf(stderr, "Enter row,col,val\n");
+    fflush(stderr);
+    scanf("%d %d %d", &row, &col, &val);
+    Game_Board[row][col] = val;
+    printBoardAsLine();
+*/
+    /*DEBUG*/
 
     while(1)
     {
-        char board_changed = FALSE;
-        char direction = readDirectionFromUser();
+        if(direction != '\n')
+        {
+            fprintf(stderr, "Enter direction...\n");
+            fflush(stderr);
+        }
+
+        direction = readDirectionFromUser();
 
         if(!isDirectionValid(direction))
         {
+            if(direction != '\n')
+            {
+                fprintf(stderr, "Invalid direction: %c\n", direction);
+                fflush(stderr);
+            }
             continue;
         }
 
@@ -255,7 +299,21 @@ static void handleGame(void)
         fflush(stderr);
 
         handleMove(direction);
+        if(direction != 'S')
+        {
+            printBoardAsLine();
+        }
+
+
+        /*DEBUG*/
+        /*
+        fprintf(stderr, "Enter row,col,val\n");
+        fflush(stderr);
+        scanf("%d %d %d", &row, &col, &val);
+        Game_Board[row][col] = val;
         printBoardAsLine();
+        */
+        /*DEBUG*/
     }
 }
 
@@ -389,33 +447,40 @@ static void handleMove(char direction)
 {
     const int ONWARDS = 1, BACKWARDS = -1;
     const unsigned int FIRST_INDEX = 0;
-    char has_board_changed = 0;
+    char dont_spawn_new_slot = 0;
 
     switch(direction)
     {
         case NEW_GAME_KEY:
             startNewGame();
-            has_board_changed = TRUE;
+            dont_spawn_new_slot = TRUE;
             break;
 
         case UP_KEY:
-            has_board_changed = runGameAlgorithmForCols(BOARD_COL_SIZE - 1, FIRST_INDEX, BACKWARDS);
+            dont_spawn_new_slot = runGameAlgorithmForCols(BOARD_COL_SIZE - 1, FIRST_INDEX, BACKWARDS);
             break;
 
         case DOWN_KEY:
-            has_board_changed = runGameAlgorithmForCols(FIRST_INDEX, BOARD_COL_SIZE - 1, ONWARDS);
+            dont_spawn_new_slot = runGameAlgorithmForCols(FIRST_INDEX, BOARD_COL_SIZE - 1, ONWARDS);
             break;
 
         case LEFT_KEY:
-            has_board_changed = runGameAlgorithmForRows(BOARD_ROW_SIZE - 1, FIRST_INDEX, BACKWARDS);
+            dont_spawn_new_slot = runGameAlgorithmForRows(BOARD_ROW_SIZE - 1, FIRST_INDEX, BACKWARDS);
             break;
 
         case RIGHT_KEY:
-            has_board_changed = runGameAlgorithmForRows(FIRST_INDEX, BOARD_ROW_SIZE - 1, ONWARDS);
+            dont_spawn_new_slot = runGameAlgorithmForRows(FIRST_INDEX, BOARD_ROW_SIZE - 1, ONWARDS);
             break;
 
         default:
             break;
+    }
+
+    if(!dont_spawn_new_slot && !isBoardFull())
+    {
+        //TODO: remove (this is debug only)
+        unsigned int slot_index = getRandomFreeIndex();
+        *(Game_Board[0] + slot_index) = 2;
     }
 }
 /********************************/
