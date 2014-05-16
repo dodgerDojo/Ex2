@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <signal.h>
 
+
 /********************************/
 
 // Defines:
@@ -31,6 +32,9 @@
 
 #define FREE_SLOT                 (0)
 
+#define CREATED_SLOT_VALUE        (2)
+
+
 // Max. number to print to screen is '2048' which is 4 byte long.
 #define NUM_OF_BYTES_TO_WRITE     (10)
 
@@ -44,6 +48,8 @@
 #define WRITE_ERROR               ("write() failed.\n")
 #define KILL_ERROR                ("kill() failed.\n")
 #define READ_ERROR                ("read() failed.\n")
+#define SIGACTION_ERROR           ("sigaction() failed.\n")
+#define SIGFILLSET_ERROR          ("sigfillset() failed.\n")
 #define NOF_INPUTS_ERROR          ("Wrong number of inputs.\n")
 
 #define EXIT_ERROR_CODE           (-1)
@@ -76,16 +82,18 @@ static void startNewGame(void);
 static char readDirectionFromUser(void);
 static char isDirectionValid(char direction);
 
-static void spawnNewSlot(void);
+static void updateSpawnTime(void);
 
 static void handleGame(void);
 
 static void runGameAlgorithm(unsigned int line[], int start, int end, int direction);
 
-static char runGameAlgorithmForRows(int start, int end, int direction);
-static char runGameAlgorithmForCols(int start, int end, int direction);
+static void runGameAlgorithmForRows(int start, int end, int direction);
+static void runGameAlgorithmForCols(int start, int end, int direction);
 
 static void handleMove(char direction);
+
+static void sigalrm_handler(int sig);
 
 /********************************/
 
@@ -189,13 +197,11 @@ static void startNewGame(void)
 {
     int i = 0, slot_index = 0;
     const int NUM_OF_NEW_SLOTS_TO_CREATE = 2;
-    const int CREATED_SLOT_VALUE = 2;
 
     // Clear game board.
     memset(Game_Board, 0, sizeof(Game_Board));
 
-    // Get a random waiting time.
-    Spawn_Time = getRandomSpawnTime();
+    updateSpawnTime();
 
     // Choose slots to be the first initialized slots.
     for(i = 0; i < NUM_OF_NEW_SLOTS_TO_CREATE; ++i)
@@ -232,48 +238,19 @@ static char isDirectionValid(char direction)
             (direction == NEW_GAME_KEY));
 }
 
-static void spawnNewSlot(void)
+static void updateSpawnTime(void)
 {
+    // Get a random waiting time.
+    Spawn_Time = getRandomSpawnTime();
 
+    // Set alarm.
+    alarm(Spawn_Time);
 }
 
 static void handleGame(void)
 {
     char direction = 0;
     startNewGame();
-
-    /*DEBUG*/
-/*
-    int row = 0, col = 0, val = 0;
-
-    Game_Board[0][0] = 2;
-    Game_Board[0][1] = 4;
-    Game_Board[0][2] = 8;
-    Game_Board[0][3] = 4;
-
-    Game_Board[1][2] = 2;
-    Game_Board[1][3] = 2;
-
-    Game_Board[2][2] = 2;
-    Game_Board[2][3] = 8;
-
-    Game_Board[3][3] = 2;
-
-    printBoardAsLine();
-
-    fprintf(stderr, "Enter row,col,val\n");
-    fflush(stderr);
-    scanf("%d %d %d", &row, &col, &val);
-    Game_Board[row][col] = val;
-    printBoardAsLine();
-
-    fprintf(stderr, "Enter row,col,val\n");
-    fflush(stderr);
-    scanf("%d %d %d", &row, &col, &val);
-    Game_Board[row][col] = val;
-    printBoardAsLine();
-*/
-    /*DEBUG*/
 
     while(1)
     {
@@ -303,17 +280,6 @@ static void handleGame(void)
         {
             printBoardAsLine();
         }
-
-
-        /*DEBUG*/
-        /*
-        fprintf(stderr, "Enter row,col,val\n");
-        fflush(stderr);
-        scanf("%d %d %d", &row, &col, &val);
-        Game_Board[row][col] = val;
-        printBoardAsLine();
-        */
-        /*DEBUG*/
     }
 }
 
@@ -369,9 +335,8 @@ static void runGameAlgorithm(unsigned int line[], int start, int end, int direct
     }
 }
 
-static char runGameAlgorithmForRows(int start, int end, int direction)
+static void runGameAlgorithmForRows(int start, int end, int direction)
 {
-    char board_remaind_the_same_flag = 1;
     int row = 0, col = 0;
 
     unsigned int line[BOARD_ROW_SIZE] = {0};
@@ -386,29 +351,16 @@ static char runGameAlgorithmForRows(int start, int end, int direction)
         // Run the algorithm
         runGameAlgorithm(line, start, end, direction);
 
-        // Check if there was a change
-        for(col = 0; col <BOARD_COL_SIZE; ++col)
-        {
-            if(Game_Board[row][col] != line[col])
-            {
-                board_remaind_the_same_flag = 0;
-                break;
-            }
-        }
-
         // Copy back
         for(col = 0; col <BOARD_COL_SIZE; ++col)
         {
             Game_Board[row][col] = line[col];
         }
     }
-
-    return board_remaind_the_same_flag;
 }
 
-static char runGameAlgorithmForCols(int start, int end, int direction)
+static void runGameAlgorithmForCols(int start, int end, int direction)
 {
-    char board_remaind_the_same_flag = TRUE;
     unsigned int line[BOARD_COL_SIZE] = {0};
     int row = 0, col = 0;
 
@@ -423,66 +375,62 @@ static char runGameAlgorithmForCols(int start, int end, int direction)
         // Run the algorithm
         runGameAlgorithm(line, start, end, direction);
 
-        // Check if there was a change
-        for(row = 0; row < BOARD_ROW_SIZE; ++row)
-        {
-            if(Game_Board[row][col] != line[row])
-            {
-                board_remaind_the_same_flag = FALSE;
-                break;
-            }
-        }
-
         // Copy back
         for(row = 0; row < BOARD_ROW_SIZE; ++row)
         {
             Game_Board[row][col] = line[row];
         }
     }
-
-    return board_remaind_the_same_flag;
 }
 
 static void handleMove(char direction)
 {
     const int ONWARDS = 1, BACKWARDS = -1;
     const unsigned int FIRST_INDEX = 0;
-    char dont_spawn_new_slot = 0;
 
     switch(direction)
     {
         case NEW_GAME_KEY:
             startNewGame();
-            dont_spawn_new_slot = TRUE;
-            break;
+            return;
 
         case UP_KEY:
-            dont_spawn_new_slot = runGameAlgorithmForCols(BOARD_COL_SIZE - 1, FIRST_INDEX, BACKWARDS);
+            runGameAlgorithmForCols(BOARD_COL_SIZE - 1, FIRST_INDEX, BACKWARDS);
             break;
 
         case DOWN_KEY:
-            dont_spawn_new_slot = runGameAlgorithmForCols(FIRST_INDEX, BOARD_COL_SIZE - 1, ONWARDS);
+            runGameAlgorithmForCols(FIRST_INDEX, BOARD_COL_SIZE - 1, ONWARDS);
             break;
 
         case LEFT_KEY:
-            dont_spawn_new_slot = runGameAlgorithmForRows(BOARD_ROW_SIZE - 1, FIRST_INDEX, BACKWARDS);
+            runGameAlgorithmForRows(BOARD_ROW_SIZE - 1, FIRST_INDEX, BACKWARDS);
             break;
 
         case RIGHT_KEY:
-            dont_spawn_new_slot = runGameAlgorithmForRows(FIRST_INDEX, BOARD_ROW_SIZE - 1, ONWARDS);
+            runGameAlgorithmForRows(FIRST_INDEX, BOARD_ROW_SIZE - 1, ONWARDS);
             break;
 
         default:
             break;
     }
 
-    if(!dont_spawn_new_slot && !isBoardFull())
-    {
-        //TODO: remove (this is debug only)
-        unsigned int slot_index = getRandomFreeIndex();
-        *(Game_Board[0] + slot_index) = 2;
-    }
+    updateSpawnTime();
+    printBoardAsLine();
 }
+
+static void sigalrm_handler(int sig)
+{
+    // Add a new value.
+    if(!isBoardFull())
+    {
+        unsigned int slot_index = getRandomFreeIndex();
+        *(Game_Board[0] + slot_index) = CREATED_SLOT_VALUE;
+    }
+
+    updateSpawnTime();
+    printBoardAsLine();
+}
+
 /********************************/
 
 // Main:
@@ -491,6 +439,9 @@ int main(int argc, char *argv[])
 {
     const unsigned int NUM_OF_INPUTS = 1;
     const unsigned int ARGV_PRINTER_PID_INDEX = 1;
+
+    struct sigaction usr_action;
+    sigset_t block_mask;
 
     fprintf(stderr, "%s", "UPD:: In Upd.\n");
     fflush(stderr);
@@ -508,6 +459,25 @@ int main(int argc, char *argv[])
 
     // Get the printer's pid.
     Printer_Pid = atoi(argv[ARGV_PRINTER_PID_INDEX]);
+
+    // Prepare the alarm handler
+    if(sigfillset(&block_mask) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, SIGFILLSET_ERROR, sizeof(SIGFILLSET_ERROR));
+        exit(EXIT_ERROR_CODE);
+    }
+
+    // Establish the SIGALRM signal handler.
+    usr_action.sa_handler = sigalrm_handler;
+    usr_action.sa_mask = block_mask;
+    usr_action.sa_flags = 0;
+    if(sigaction(SIGALRM, &usr_action, NULL) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR));
+        exit(EXIT_ERROR_CODE);
+    }
 
     handleGame();
 
