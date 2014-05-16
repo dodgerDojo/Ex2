@@ -1,6 +1,6 @@
 // TODO:
 // 1. how to wait for printer to initialize?
-
+// 2. add getch() !! will not work in terminal but in ssh.
 /********************************/
 
 // Includes:
@@ -32,8 +32,8 @@
 #define EXIT_ERROR_CODE      (1)
 #define EXIT_OK_CODE         (0)
 
-#define PRINTER_PROCESS_PATH ("./ex2_inp.o")
-#define GAME_PROCESS_PATH    ("./ex2_upd.o")
+#define PRINTER_PROCESS_PATH ("./ex2_inp.out")
+#define GAME_PROCESS_PATH    ("./ex2_upd.out")
 
 #define MAX_PID_DIGITS       (10)
 

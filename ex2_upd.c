@@ -2,6 +2,7 @@
 // 1. check if the matrix has free space.
 // 2. printf->write(STDOUT)
 // 3. kill() return address
+// 4. take care of new spawn.
 
 /********************************/
 
@@ -17,6 +18,9 @@
 /********************************/
 
 // Defines:
+
+#define TRUE                      (1)
+#define FALSE                     (0)
 
 #define BOARD_ROW_SIZE            (4)
 #define BOARD_COL_SIZE            (4)
@@ -72,12 +76,16 @@ static void startNewGame(void);
 static char readDirectionFromUser(void);
 static char isDirectionValid(char direction);
 
-static void updateGameBoard(char direction);
 static void spawnNewSlot(void);
 
 static void handleGame(void);
 
-static char runGameAlgorithm(unsigned int line[], int start, int end, int direction);
+static void runGameAlgorithm(unsigned int line[], int start, int end, int direction);
+
+static char runGameAlgorithmForRows(int start, int end, int direction);
+static char runGameAlgorithmForCols(int start, int end, int direction);
+
+static void handleMove(char direction);
 
 /********************************/
 
@@ -224,11 +232,6 @@ static char isDirectionValid(char direction)
             (direction == NEW_GAME_KEY));
 }
 
-static void updateGameBoard(char direction)
-{
-
-}
-
 static void spawnNewSlot(void)
 {
 
@@ -240,6 +243,7 @@ static void handleGame(void)
 
     while(1)
     {
+        char board_changed = FALSE;
         char direction = readDirectionFromUser();
 
         if(!isDirectionValid(direction))
@@ -250,16 +254,16 @@ static void handleGame(void)
         fprintf(stderr, "Got direction: %c\n", direction);
         fflush(stderr);
 
-        updateGameBoard(direction);
-        spawnNewSlot();
+        handleMove(direction);
         printBoardAsLine();
     }
 }
 
 
-static char runGameAlgorithm(unsigned int line[], int start, int end, int direction)
+
+static void runGameAlgorithm(unsigned int line[], int start, int end, int direction)
 {
-    unsigned int already_unified_flags[BOARD_ROW_SIZE] = {0};
+    unsigned int already_unified_flags[BOARD_ROW_SIZE] = {FALSE};
 
     // Starting from the slot before the last slot.
     int index = end - direction;
@@ -294,8 +298,8 @@ static char runGameAlgorithm(unsigned int line[], int start, int end, int direct
                 {
                     // Unify and update flags.
                     line[next] = line[next] + line[runner];
-                    line[runner] = 0;
-                    already_unified_flags[next] = 1;
+                    line[runner] = FREE_SLOT;
+                    already_unified_flags[next] = TRUE;
                 }
             }
 
@@ -307,6 +311,113 @@ static char runGameAlgorithm(unsigned int line[], int start, int end, int direct
     }
 }
 
+static char runGameAlgorithmForRows(int start, int end, int direction)
+{
+    char board_remaind_the_same_flag = 1;
+    int row = 0, col = 0;
+
+    unsigned int line[BOARD_ROW_SIZE] = {0};
+    for(row = 0; row < BOARD_ROW_SIZE; ++row)
+    {
+        // Copy the row
+        for(col = 0; col <BOARD_COL_SIZE; ++col)
+        {
+            line[col] = Game_Board[row][col];
+        }
+
+        // Run the algorithm
+        runGameAlgorithm(line, start, end, direction);
+
+        // Check if there was a change
+        for(col = 0; col <BOARD_COL_SIZE; ++col)
+        {
+            if(Game_Board[row][col] != line[col])
+            {
+                board_remaind_the_same_flag = 0;
+                break;
+            }
+        }
+
+        // Copy back
+        for(col = 0; col <BOARD_COL_SIZE; ++col)
+        {
+            Game_Board[row][col] = line[col];
+        }
+    }
+
+    return board_remaind_the_same_flag;
+}
+
+static char runGameAlgorithmForCols(int start, int end, int direction)
+{
+    char board_remaind_the_same_flag = TRUE;
+    unsigned int line[BOARD_COL_SIZE] = {0};
+    int row = 0, col = 0;
+
+    for(col = 0; col <BOARD_COL_SIZE; ++col)
+    {
+        // Copy the col
+        for(row = 0; row < BOARD_ROW_SIZE; ++row)
+        {
+            line[row] = Game_Board[row][col];
+        }
+
+        // Run the algorithm
+        runGameAlgorithm(line, start, end, direction);
+
+        // Check if there was a change
+        for(row = 0; row < BOARD_ROW_SIZE; ++row)
+        {
+            if(Game_Board[row][col] != line[row])
+            {
+                board_remaind_the_same_flag = FALSE;
+                break;
+            }
+        }
+
+        // Copy back
+        for(row = 0; row < BOARD_ROW_SIZE; ++row)
+        {
+            Game_Board[row][col] = line[row];
+        }
+    }
+
+    return board_remaind_the_same_flag;
+}
+
+static void handleMove(char direction)
+{
+    const int ONWARDS = 1, BACKWARDS = -1;
+    const unsigned int FIRST_INDEX = 0;
+    char has_board_changed = 0;
+
+    switch(direction)
+    {
+        case NEW_GAME_KEY:
+            startNewGame();
+            has_board_changed = TRUE;
+            break;
+
+        case UP_KEY:
+            has_board_changed = runGameAlgorithmForCols(BOARD_COL_SIZE - 1, FIRST_INDEX, BACKWARDS);
+            break;
+
+        case DOWN_KEY:
+            has_board_changed = runGameAlgorithmForCols(FIRST_INDEX, BOARD_COL_SIZE - 1, ONWARDS);
+            break;
+
+        case LEFT_KEY:
+            has_board_changed = runGameAlgorithmForRows(BOARD_ROW_SIZE - 1, FIRST_INDEX, BACKWARDS);
+            break;
+
+        case RIGHT_KEY:
+            has_board_changed = runGameAlgorithmForRows(FIRST_INDEX, BOARD_ROW_SIZE - 1, ONWARDS);
+            break;
+
+        default:
+            break;
+    }
+}
 /********************************/
 
 // Main:
