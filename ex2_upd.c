@@ -4,6 +4,8 @@
 // 3. kill() return address
 // 4. take care of new spawn.
 // 5. write(x, l, sizeof(l)-1)
+// 6. what each process does on sigint?
+// 7. check out the print of the game - i think it's wrong
 /********************************/
 
 // Includes:
@@ -56,7 +58,10 @@
 #define SIGFILLSET_ERROR          ("sigfillset() failed.\n")
 #define NOF_INPUTS_ERROR          ("Wrong number of inputs.\n")
 #define GETCH_ERROR               ("getch() error.\n")
+#define CLOSE_ERROR               ("close() failed.\n")
 
+
+#define EXIT_OK_CODE              (0)
 #define EXIT_ERROR_CODE           (-1)
 
 /********************************/
@@ -66,6 +71,7 @@
 static pid_t Printer_Pid;
 
 volatile sig_atomic_t gotAlarmSignal = 0;
+volatile sig_atomic_t gotSigint = 0;
 
 static unsigned int Game_Board[BOARD_ROW_SIZE][BOARD_COL_SIZE];
 static unsigned int Spawn_Time;
@@ -481,6 +487,16 @@ static void handleMove(char direction)
 
 static void sigalrm_handler(int sig)
 {
+    gotAlarmSignal = 1;
+}
+
+static void pollAlarmSignal(void)
+{
+    if(!gotAlarmSignal)
+    {
+        return;
+    }
+
     fprintf(stderr, "ALARM HANDLER!\n");
     fflush(stderr);
 
@@ -492,16 +508,8 @@ static void sigalrm_handler(int sig)
     }
 
     updateSpawnTime();
-    gotAlarmSignal = 1;
-}
-
-static void pollAlarmSignal(void)
-{
-    if(gotAlarmSignal)
-    {
-        gotAlarmSignal = 0;
-        printBoardAsLine();
-    }
+    gotAlarmSignal = 0;
+    printBoardAsLine();
 }
 
 /********************************/

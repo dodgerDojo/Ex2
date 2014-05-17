@@ -70,7 +70,14 @@ static void createPipe(void)
 
 static void closePipe(int pipe[])
 {
-    if((close(pipe[PIPE_WRITE]) < 0) || (close(pipe[PIPE_READ]) < 0))
+    if(close(pipe[PIPE_WRITE]) < 0)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, CLOSE_ERROR, sizeof(CLOSE_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+
+    if(close(pipe[PIPE_READ]) < 0)
     {
         // No checking needed, exits with error code.
         write(STDERR_FILENO, CLOSE_ERROR, sizeof(CLOSE_ERROR) - 1);
@@ -108,6 +115,16 @@ static pid_t runPrinterProcess(char *args[])
             write(STDERR_FILENO, DUP2_ERROR, sizeof(DUP2_ERROR) - 1);
             exit(EXIT_ERROR_CODE);
         }
+
+        // Close read side of pipe.
+        if(close(Game_To_Printer_Pipe_Fds[PIPE_READ]) < 0)
+        {
+            // No checking needed, exits with error code.
+            write(STDERR_FILENO, CLOSE_ERROR, sizeof(CLOSE_ERROR) - 1);
+            exit(EXIT_ERROR_CODE);
+        }
+
+        sleep(2);
 
         // Run the printer's process.
         execvp(args[0], args);
@@ -153,6 +170,16 @@ static pid_t runGameProcess(char *args[])
             write(STDERR_FILENO, DUP2_ERROR, sizeof(DUP2_ERROR) - 1);
             exit(EXIT_ERROR_CODE);
         }
+
+        // Close write side of pipe.
+        if(close(Game_To_Printer_Pipe_Fds[PIPE_WRITE]) < 0)
+        {
+            // No checking needed, exits with error code.
+            write(STDERR_FILENO, CLOSE_ERROR, sizeof(CLOSE_ERROR) - 1);
+            exit(EXIT_ERROR_CODE);
+        }
+
+        sleep(2);
 
         // Run the game's process.
         execvp(args[0], args);
@@ -232,5 +259,6 @@ int main(int argc, char *argv[])
     }
 
     printf("Game Ended.\n");
+    sleep(1);
     return EXIT_OK_CODE;
 }

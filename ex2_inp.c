@@ -28,6 +28,7 @@
 #define SIGACTION_ERROR     ("sigaction() failed.\n")
 #define SIGDELSET_ERROR     ("sigdelset() failed.\n")
 #define SIGFILLSET_ERROR    ("sigfillset() failed.\n")
+#define CLOSE_ERROR         ("close() failed.\n")
 
 #define EXIT_MESSAGE        ("BYE BYE\n")
 
@@ -51,6 +52,7 @@ volatile sig_atomic_t gotsignal = 0;
 static void printGameBoard(char *p_board_line);
 
 static void sigusr1_handler(int sig);
+static void sigint_handler(int sig);
 
 static void tryToWriteToStdout(const char *p_message, unsigned int message_len);
 
