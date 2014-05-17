@@ -65,6 +65,7 @@
 
 static pid_t Printer_Pid;
 
+volatile sig_atomic_t gotAlarmSignal = 0;
 
 static unsigned int Game_Board[BOARD_ROW_SIZE][BOARD_COL_SIZE];
 static unsigned int Spawn_Time;
@@ -101,6 +102,7 @@ static void handleMove(char direction);
 static void sigalrm_handler(int sig);
 
 static void DEBUG_PRINT(void);
+static void pollAlarmSignal(void);
 
 /********************************/
 
@@ -273,6 +275,10 @@ static char readDirectionFromUser(void)
             write(STDERR_FILENO, GETCH_ERROR, sizeof(GETCH_ERROR) - 1);
             exit(EXIT_ERROR_CODE);
         }
+        else
+        {
+            pollAlarmSignal();
+        }
 
         direction = getch();
     }
@@ -303,6 +309,8 @@ static void handleGame(void)
 
     while(1)
     {
+        pollAlarmSignal();
+
         if(direction != '\n')
         {
             fprintf(stderr, "Enter direction...\n");
@@ -484,7 +492,16 @@ static void sigalrm_handler(int sig)
     }
 
     updateSpawnTime();
-    printBoardAsLine();
+    gotAlarmSignal = 1;
+}
+
+static void pollAlarmSignal(void)
+{
+    if(gotAlarmSignal)
+    {
+        gotAlarmSignal = 0;
+        printBoardAsLine();
+    }
 }
 
 /********************************/

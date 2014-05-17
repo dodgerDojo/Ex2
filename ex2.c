@@ -24,6 +24,7 @@
 #define FORK_ERROR           ("fork() failed.\n")
 #define DUP2_ERROR           ("dup2() failed.\n")
 #define KILL_ERROR           ("kill() failed.\n")
+#define NOF_INPUTS_ERROR     ("Wrong number of inputs.\n")
 
 #define PIPE_FDS_AMOUNT      (2)
 #define PIPE_READ            (0)
@@ -168,15 +169,30 @@ static pid_t runGameProcess(char *args[])
 
 // Main:
 
-int main(void)
+int main(int argc, char *argv[])
 {
+    const unsigned int NUM_OF_INPUTS = 1, ARGV_RUNNING_TIME_INDEX = 1;
+
     pid_t printer_pid = 0, game_pid = 0;
     char printer_pid_str[MAX_PID_DIGITS] = {0};
 
     char *printer_args[] = {PRINTER_PROCESS_PATH, NULL};
     char *game_args[] = {GAME_PROCESS_PATH, NULL, NULL};
 
+    int running_time = 0;
+
     printf("parent pid: %d\n", getpid());
+
+    // Check number of inputs.
+    if(argc != NUM_OF_INPUTS + 1)
+    {
+        // No checking needed, exits with error code.
+        write(STDERR_FILENO, NOF_INPUTS_ERROR, sizeof(NOF_INPUTS_ERROR) - 1);
+        exit(EXIT_ERROR_CODE);
+    }
+
+    // Get the game's running time (in seconds).
+    running_time = atoi(argv[ARGV_RUNNING_TIME_INDEX]);
 
     // Create pipe.
     createPipe();
@@ -199,7 +215,7 @@ int main(void)
     // Parent closes pipe [doesn't use it].
     closePipe(Game_To_Printer_Pipe_Fds);
 
-    sleep(30000);
+    sleep(running_time);
 
     if(kill(printer_pid, SIGINT) < 0)
     {
