@@ -3,7 +3,7 @@
 // 2. printf->write(STDOUT)
 // 3. kill() return address
 // 4. take care of new spawn.
-
+// 5. write(x, l, sizeof(l)-1)
 /********************************/
 
 // Includes:
@@ -14,7 +14,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-
+#include <termios.h>
+#include <errno.h>
 
 /********************************/
 
@@ -44,6 +45,9 @@
 #define LEFT_KEY                  ('A')
 #define RIGHT_KEY                 ('D')
 #define NEW_GAME_KEY              ('S')
+#define INVALID_CHAR              (0)
+
+#define TURN_OFF_ALARM            (0)
 
 #define WRITE_ERROR               ("write() failed.\n")
 #define KILL_ERROR                ("kill() failed.\n")
@@ -51,6 +55,7 @@
 #define SIGACTION_ERROR           ("sigaction() failed.\n")
 #define SIGFILLSET_ERROR          ("sigfillset() failed.\n")
 #define NOF_INPUTS_ERROR          ("Wrong number of inputs.\n")
+#define GETCH_ERROR               ("getch() error.\n")
 
 #define EXIT_ERROR_CODE           (-1)
 
@@ -95,9 +100,29 @@ static void handleMove(char direction);
 
 static void sigalrm_handler(int sig);
 
+static void DEBUG_PRINT(void);
+
 /********************************/
 
 // Functions:
+
+static void DEBUG_PRINT(void)
+{
+    fprintf(stderr, "Debug print: ");
+    fflush(stderr);
+    int i = 0, j = 0;
+
+    for(i = 0; i < 4; i++)
+    {
+        for(j = 0; j < 4; j++)
+        {
+            fprintf(stderr, "%d,", Game_Board[i][j]);
+            fflush(stderr);
+        }
+    }
+    fprintf(stderr, "\n");
+    fflush(stderr);
+}
 
 static void tryToWriteToStdout(const char *p_message, unsigned int message_len)
 {
@@ -216,16 +241,40 @@ static void startNewGame(void)
     printBoardAsLine();
 }
 
+char getch() {
+        char buf = 0;
+        struct termios old = {0};
+        if (tcgetattr(0, &old) < 0)
+                return 0;
+        old.c_lflag &= ~ICANON;
+        old.c_lflag &= ~ECHO;
+        old.c_cc[VMIN] = 1;
+        old.c_cc[VTIME] = 0;
+        if (tcsetattr(0, TCSANOW, &old) < 0)
+                return 0;
+        if (read(0, &buf, 1) < 0)
+                return 0;
+        old.c_lflag |= ICANON;
+        old.c_lflag |= ECHO;
+        if (tcsetattr(0, TCSADRAIN, &old) < 0)
+                return 0;
+        return (buf);
+}
+
 static char readDirectionFromUser(void)
 {
-    char direction = 0;
+    char direction = getch();
 
-    // Read one character from STDIN.
-    if(read(STDIN_FILENO, &direction, sizeof(direction)) <= 0)
+    while(direction == INVALID_CHAR)
     {
-        // No checking needed, exits with error code.
-        write(STDERR_FILENO, READ_ERROR, sizeof(READ_ERROR));
-        exit(EXIT_ERROR_CODE);
+        if(!(errno == EINTR))
+        {
+            // No checking needed, exits with error code.
+            write(STDERR_FILENO, GETCH_ERROR, sizeof(GETCH_ERROR) - 1);
+            exit(EXIT_ERROR_CODE);
+        }
+
+        direction = getch();
     }
 
     return direction;
@@ -275,11 +324,10 @@ static void handleGame(void)
         fprintf(stderr, "Got direction: %c\n", direction);
         fflush(stderr);
 
+        // A valid direction was received - turn off alarm.
+        alarm(TURN_OFF_ALARM);
+
         handleMove(direction);
-        if(direction != 'S')
-        {
-            printBoardAsLine();
-        }
     }
 }
 
@@ -399,7 +447,10 @@ static void handleMove(char direction)
             break;
 
         case DOWN_KEY:
+            fprintf(stderr, "Moving down!\n");
+            fflush(stderr);
             runGameAlgorithmForCols(FIRST_INDEX, BOARD_COL_SIZE - 1, ONWARDS);
+            DEBUG_PRINT();
             break;
 
         case LEFT_KEY:
@@ -415,11 +466,16 @@ static void handleMove(char direction)
     }
 
     updateSpawnTime();
+    fprintf(stderr, "Printy Prints!\n");
+    fflush(stderr);
     printBoardAsLine();
 }
 
 static void sigalrm_handler(int sig)
 {
+    fprintf(stderr, "ALARM HANDLER!\n");
+    fflush(stderr);
+
     // Add a new value.
     if(!isBoardFull())
     {
