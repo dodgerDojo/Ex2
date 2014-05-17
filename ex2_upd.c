@@ -1,9 +1,6 @@
 // TODO:
-// 1. check if the matrix has free space.
-// 2. printf->write(STDOUT)
 // 3. kill() return address
 // 4. take care of new spawn.
-// 5. write(x, l, sizeof(l)-1)
 // 6. what each process does on sigint?
 // 7. check out the print of the game - i think it's wrong
 /********************************/
@@ -107,30 +104,11 @@ static void handleMove(char direction);
 
 static void sigalrm_handler(int sig);
 
-static void DEBUG_PRINT(void);
 static void pollAlarmSignal(void);
 
 /********************************/
 
 // Functions:
-
-static void DEBUG_PRINT(void)
-{
-    fprintf(stderr, "Debug print: ");
-    fflush(stderr);
-    int i = 0, j = 0;
-
-    for(i = 0; i < 4; i++)
-    {
-        for(j = 0; j < 4; j++)
-        {
-            fprintf(stderr, "%d,", Game_Board[i][j]);
-            fflush(stderr);
-        }
-    }
-    fprintf(stderr, "\n");
-    fflush(stderr);
-}
 
 static void tryToWriteToStdout(const char *p_message, unsigned int message_len)
 {
@@ -243,9 +221,6 @@ static void startNewGame(void)
         *(Game_Board[0] + slot_index) = CREATED_SLOT_VALUE;
     }
 
-    fprintf(stderr, "%s", "UPD:: Printing Line.\n");
-    fflush(stderr);
-
     printBoardAsLine();
 }
 
@@ -317,26 +292,12 @@ static void handleGame(void)
     {
         pollAlarmSignal();
 
-        if(direction != '\n')
-        {
-            fprintf(stderr, "Enter direction...\n");
-            fflush(stderr);
-        }
-
         direction = readDirectionFromUser();
 
         if(!isDirectionValid(direction))
         {
-            if(direction != '\n')
-            {
-                fprintf(stderr, "Invalid direction: %c\n", direction);
-                fflush(stderr);
-            }
             continue;
         }
-
-        fprintf(stderr, "Got direction: %c\n", direction);
-        fflush(stderr);
 
         // A valid direction was received - turn off alarm.
         alarm(TURN_OFF_ALARM);
@@ -461,10 +422,7 @@ static void handleMove(char direction)
             break;
 
         case DOWN_KEY:
-            fprintf(stderr, "Moving down!\n");
-            fflush(stderr);
             runGameAlgorithmForCols(FIRST_INDEX, BOARD_COL_SIZE - 1, ONWARDS);
-            DEBUG_PRINT();
             break;
 
         case LEFT_KEY:
@@ -480,8 +438,6 @@ static void handleMove(char direction)
     }
 
     updateSpawnTime();
-    fprintf(stderr, "Printy Prints!\n");
-    fflush(stderr);
     printBoardAsLine();
 }
 
@@ -496,9 +452,6 @@ static void pollAlarmSignal(void)
     {
         return;
     }
-
-    fprintf(stderr, "ALARM HANDLER!\n");
-    fflush(stderr);
 
     // Add a new value.
     if(!isBoardFull())
@@ -524,9 +477,6 @@ int main(int argc, char *argv[])
     struct sigaction usr_action;
     sigset_t block_mask;
 
-    fprintf(stderr, "%s", "UPD:: In Upd.\n");
-    fflush(stderr);
-
     // Check number of inputs.
     if(argc != NUM_OF_INPUTS + 1)
     {
@@ -545,7 +495,7 @@ int main(int argc, char *argv[])
     if(sigfillset(&block_mask) < 0)
     {
         // No checking needed, exits with error code.
-        write(STDERR_FILENO, SIGFILLSET_ERROR, sizeof(SIGFILLSET_ERROR));
+        write(STDERR_FILENO, SIGFILLSET_ERROR, sizeof(SIGFILLSET_ERROR) - 1);
         exit(EXIT_ERROR_CODE);
     }
 
@@ -556,7 +506,7 @@ int main(int argc, char *argv[])
     if(sigaction(SIGALRM, &usr_action, NULL) < 0)
     {
         // No checking needed, exits with error code.
-        write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR));
+        write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR) - 1);
         exit(EXIT_ERROR_CODE);
     }
 

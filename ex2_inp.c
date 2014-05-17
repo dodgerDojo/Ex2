@@ -1,5 +1,4 @@
 // TODO:
-// 1. remove uneeded prints.
 // 2. coding style.
 // 3. ALL return values.
 // 4. remove garbage (dead comments)
@@ -94,7 +93,7 @@ static void printGameBoard(char *p_board_line)
                 {
                     sprintf(str_to_print, "| %04d ", value_as_int);
                     tryToWriteToStdout(str_to_print, strlen(str_to_print));
-                    memset(str_to_print, 0, sizeof(str_to_print));
+                    memset(str_to_print, 0, sizeof(str_to_print) - 1);
                 }
 
                 else
@@ -134,26 +133,21 @@ int main(void)
     const char ENDLINE = '\n';
     unsigned int line_buffer_index = 0;
 
-    //char str[] = "2,4,0,0,2,2,0,16,0,0,4,0,16,0,16,2048";
-
     struct sigaction usr_action;
     sigset_t block_mask;
-
-    printf("Printer:: Printer started!\n");
-    fflush(stdout);
 
     // Unblock SIGINT
     if(sigfillset(&block_mask) < 0)
     {
         // No checking needed, exits with error code.
-        write(STDERR_FILENO, SIGFILLSET_ERROR, sizeof(SIGFILLSET_ERROR));
+        write(STDERR_FILENO, SIGFILLSET_ERROR, sizeof(SIGFILLSET_ERROR) - 1);
         exit(EXIT_ERROR_CODE);
     }
 
     if(sigdelset(&block_mask, SIGINT) < 0)
     {
         // No checking needed, exits with error code.
-        write(STDERR_FILENO, SIGDELSET_ERROR, sizeof(SIGDELSET_ERROR));
+        write(STDERR_FILENO, SIGDELSET_ERROR, sizeof(SIGDELSET_ERROR) - 1);
         exit(EXIT_ERROR_CODE);
     }
 
@@ -164,12 +158,9 @@ int main(void)
     if(sigaction(SIGINT, &usr_action, NULL) < 0)
     {
         // No checking needed, exits with error code.
-        write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR));
+        write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR) - 1);
         exit(EXIT_ERROR_CODE);
     }
-
-    printf("Printer:: Ready to receive SIGINT...\n");
-    fflush(stdout);
 
     // Establish the SIGUSR1 signal handler.
     usr_action.sa_handler = sigusr1_handler;
@@ -178,23 +169,14 @@ int main(void)
     if(sigaction(SIGUSR1, &usr_action, NULL) < 0)
     {
         // No checking needed, exits with error code.
-        write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR));
+        write(STDERR_FILENO, SIGACTION_ERROR, sizeof(SIGACTION_ERROR) - 1);
         exit(EXIT_ERROR_CODE);
     }
 
-    printf("Printer:: Ready to receive SIGUSR1...\n");
-    fflush(stdout);
-
     while(1)
     {
-        printf("Printer:: Waiting for signal...\n");
-        fflush(stdout);
-
         // Wait for SIGUSR1.
         while(!gotsignal);
-
-        printf("Printer:: Got SIGUSR1!\n");
-        fflush(stdout);
 
         // Read a full line from user.
         while(read_ch != ENDLINE)
@@ -203,7 +185,7 @@ int main(void)
             if(read(STDIN_FILENO, &read_ch, sizeof(read_ch)) <= 0)
             {
                 // No checking needed, exits with error code.
-                write(STDERR_FILENO, READ_ERROR, sizeof(READ_ERROR));
+                write(STDERR_FILENO, READ_ERROR, sizeof(READ_ERROR) - 1);
                 exit(EXIT_ERROR_CODE);
             }
 
@@ -213,9 +195,6 @@ int main(void)
                 line_buffer[line_buffer_index++] = read_ch;
             }
         }
-
-        printf("Printer:: read: %s\n", line_buffer);
-        fflush(stdout);
 
         printGameBoard(line_buffer);
 

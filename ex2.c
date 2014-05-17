@@ -152,9 +152,6 @@ static pid_t runGameProcess(char *args[])
     // This is the game's process.
     if(0 == child_pid)
     {
-        printf("Game:: Close printer read side.\n");
-        fflush(stdout);
-
         // Close read side of the game-printer pipe.
         if(close(Game_To_Printer_Pipe_Fds[PIPE_READ]) < 0)
         {
@@ -208,8 +205,6 @@ int main(int argc, char *argv[])
 
     int running_time = 0;
 
-    printf("parent pid: %d\n", getpid());
-
     // Check number of inputs.
     if(argc != NUM_OF_INPUTS + 1)
     {
@@ -226,7 +221,6 @@ int main(int argc, char *argv[])
 
     // Run the printer process.
     printer_pid = runPrinterProcess(printer_args);
-    printf("printer pid: %d\n", printer_pid);
 
     // Wait for the printer to initialize.
     sleep(1);
@@ -237,7 +231,6 @@ int main(int argc, char *argv[])
 
     // Run the game process.
     game_pid = runGameProcess(game_args);
-    printf("game pid: %d\n", game_pid);
 
     // Parent closes pipe [doesn't use it].
     closePipe(Game_To_Printer_Pipe_Fds);
@@ -258,7 +251,7 @@ int main(int argc, char *argv[])
         exit(EXIT_ERROR_CODE);
     }
 
-    printf("Game Ended.\n");
     sleep(1);
+
     return EXIT_OK_CODE;
 }
