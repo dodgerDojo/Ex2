@@ -1,8 +1,3 @@
-// TODO:
-// 2. coding style.
-// 3. ALL return values.
-// 4. remove garbage (dead comments)
-// 5. coding style.
 /********************************/
 
 // Includes:

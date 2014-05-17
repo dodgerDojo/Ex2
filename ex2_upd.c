@@ -1,8 +1,3 @@
-// TODO:
-// 3. kill() return address
-// 4. take care of new spawn.
-// 6. what each process does on sigint?
-// 7. check out the print of the game - i think it's wrong
 /********************************/
 
 // Includes:

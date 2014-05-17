@@ -1,6 +1,3 @@
-// TODO:
-// 1. how to wait for printer to initialize?
-// 2. add getch() !! will not work in terminal but in ssh.
 /********************************/
 
 // Includes:
